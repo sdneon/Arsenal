@@ -18,14 +18,21 @@ Watch face with Arsenal colours.
    * Bright blue artillery background: alert, disconnected.
 
 ### Mockup
-![screenshot 1](https://raw.githubusercontent.com/sdneon/Arsenal/master/resources/images/example-image~color.png "Watch face: 9:40PM, bluetooth connected, battery not charging")
+![mockup 1](https://raw.githubusercontent.com/sdneon/Arsenal/master/resources/images/example-image~color.png "Watch face: 9:40PM, bluetooth connected, battery not charging")
+Watch face: 9:40PM, bluetooth connected
+
+#### Screenshots
+![screenshot 1](https://raw.githubusercontent.com/sdneon/Arsenal/master/store/screenshot-920pm.png "Watch face: 9:20PM, bluetooth connected, battery not charging")
 Watch face: PM, bluetooth connected
 
+![screenshot 2](https://raw.githubusercontent.com/sdneon/Arsenal/master/store/screenshot-1806.png "Watch face: 1806H, bluetooth connected, battery not charging")
+Watch face: 1806H (24-hours style), bluetooth connected
+
+![screenshot 3](https://raw.githubusercontent.com/sdneon/Arsenal/master/store/screenshot-1130pm.png "Watch face: 11:30PM, bluetooth connected, battery not charging")
+Watch face: 11:30PM, bluetooth connected
 
 ## Credits
-Thanks to:
-* Ariq Sya for his [Lemon/Milk font](http://www.dafont.com/lemon-milk.font?fpp=10&psize=l&text=1234567890), which I've used to generate larger digits in a hollow style.
-* And all the fantastic tools to convert TTF to SVG to GPath.
+ Refer to my [Barcelona watch face](https://github.com/sdneon/Barcelona).
 
 ## Changelog
 * v1.0
