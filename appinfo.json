@@ -1,0 +1,56 @@
+{
+  "capabilities": [
+    "configurable"
+  ],
+  "appKeys": {
+    "KEY_VIBES": 0
+  },
+  "resources": {
+    "media": [
+        {
+            "type": "png",
+            "menuIcon": true,
+            "name": "IMAGE_MENU_ICON",
+            "file": "images/logo.png"
+        },
+        {
+          "type": "png",
+          "name": "EXAMPLE_IMAGE",
+          "file": "images/example-image.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_ITEM",
+          "file": "images/item.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_ITEM_DIM",
+          "file": "images/item-dim.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_TITLE",
+          "file": "images/title.png"
+        },
+        {
+          "type": "png",
+          "name": "IMAGE_HEX",
+          "file": "images/redhex.png"
+        }
+    ]
+  },
+  "shortName": "Arsenal",
+  "longName": "Arsenal (Digital, Color) Watch Face",
+  "versionCode": 1,
+  "companyName": "neon",
+  "versionLabel": "1.0",
+  "uuid": "e91a944a-fdbb-4953-99a4-f96c665213b9",
+  "watchapp": {
+    "watchface": true
+  },
+  "targetPlatforms": [
+    "basalt"
+  ],
+  "sdkVersion": "3"
+}
