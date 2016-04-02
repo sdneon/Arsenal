@@ -23,7 +23,7 @@ Watch face: 9:40PM, bluetooth connected
 
 #### Screenshots
 ![screenshot 1](https://raw.githubusercontent.com/sdneon/Arsenal/master/store/screenshot-920pm.png "Watch face: 9:20PM, bluetooth connected, battery not charging")
-Watch face: PM, bluetooth connected
+Watch face: 9:20PM, bluetooth connected
 
 ![screenshot 2](https://raw.githubusercontent.com/sdneon/Arsenal/master/store/screenshot-1806.png "Watch face: 1806H, bluetooth connected, battery not charging")
 Watch face: 1806H (24-hours style), bluetooth connected
