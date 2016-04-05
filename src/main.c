@@ -244,7 +244,8 @@ void updateOnes(Layer *layer, GContext *ctx)
     graphics_context_set_stroke_width(ctx, 2);
     graphics_context_set_stroke_color(ctx, GColorWhite);
     gpath_draw_outline(ctx, !bIs11? m_spathNums[hrOnes]: m_spathNums[10]);
-    if (h == 8) //Captain
+    bool bIs8 = (h == 8) || (!bIs24hStyle && (h == 20));
+    if (bIs8) //Captain
     {
         graphics_context_set_stroke_width(ctx, 1);
         graphics_context_set_stroke_color(ctx, GColorOxfordBlue);
@@ -267,17 +268,20 @@ void updateCard(Layer *layer, GContext *ctx)
     graphics_fill_rect(ctx, r, 0, GCornerNone);
     */
 
-    if (m_sBattState.charge_percent > 20)
+    bool bIsLow = m_sBattState.charge_percent <= 20;
+    if (bIsLow)
     {
-        return;
+        // Fill the path:
+        graphics_context_set_fill_color(ctx, m_sBattState.charge_percent <= 10? GColorRed: GColorYellow);
+        gpath_draw_filled(ctx, m_spathCard);
     }
-    // Fill the path:
-    graphics_context_set_fill_color(ctx, m_sBattState.charge_percent <= 10? GColorRed: GColorYellow);
-    gpath_draw_filled(ctx, m_spathCard);
-    // Stroke the path:
-    //graphics_context_set_stroke_width(ctx, 2);
-    graphics_context_set_stroke_color(ctx, m_sBattState.is_charging? GColorWhite: GColorBlack);
-    gpath_draw_outline(ctx, m_spathCard);
+    if (bIsLow || m_sBattState.is_charging)
+    {
+        // Stroke the path:
+        //graphics_context_set_stroke_width(ctx, 2);
+        graphics_context_set_stroke_color(ctx, m_sBattState.is_charging? GColorWhite: GColorBlack);
+        gpath_draw_outline(ctx, m_spathCard);
+    }
 }
 
 /**
