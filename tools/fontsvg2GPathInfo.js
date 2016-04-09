@@ -31,13 +31,16 @@ var FILE_FONTSVG = './fromfont.svg',
     //
     PRINTSCREEN = false,
     DRAW_ORIGINAL = false,
-    DRAW_STRAIGHTENED = true;
+    DRAW_STRAIGHTENED = true,
+    DRAW_SPLITS = true,
+    DRAW_REF_PTS = false;
 
 //Constants
 var RX_FONT_ENTRY = /<\s*glyph\s+unicode\s*=\s*"(\d)".*\s+d\s*=\s*\"([^"]+)"\s*\/>/gm,
     //RX_SVG_CMD = /([a-z])([^a-z]+)/gi;
     RX_SVG_CMD = /(?:([a-y])([^a-z]+))|(z)/gim,
     RX_LAST_COORD = /(-?\d+(?:\.\d*)?)[, \n](-?\d+(?:\.\d*)?)$/m,
+    //RX_LAST_COORD = /(-?\d+(?:\.\d*)?(?:e-?\d+(?:\.\d*))?)[, \n](-?\d+(?:\.\d*)?(?:e-?\d+(?:\.\d*))?)$/m,
     RX_LAST_2ND_COORD = /(-?\d+(?:\.\d*)?)[, \n](-?\d+(?:\.\d*)?)[, \n](?:-?\d+(?:\.\d*)?)[, \n](?:-?\d+(?:\.\d*)?)$/m,
     //RX_COORD_AND_CHAR = /(-?\d+(?:\.\d*)?)([, \nA-Za-z]+)/gm,
     RX_2COORDS_AND_CHAR = /(-?\d+(?:\.\d*)?)[, \n](-?\d+(?:\.\d*)?)([, \nA-Za-z]+)/gm,
@@ -47,14 +50,28 @@ var RX_FONT_ENTRY = /<\s*glyph\s+unicode\s*=\s*"(\d)".*\s+d\s*=\s*\"([^"]+)"\s*\
         t: 'Q',
         T: 'Q'
     },
-    CANVAS_WIDTH = 6000;
+    CANVAS_WIDTH = 10000;
 
 var fs = require('fs'),
     http = require('http'),
     raphael = require('node-raphael');
 
 var subpaths = {}, //straight lines only
+    splits = {},
     svg;
+
+/**
+ * @param dp (int) number of desired decimal points to round to
+ **/
+function reducePrecision(val, dp)
+{
+    if (typeof val === 'string')
+    {
+        val = parseFloat(val);
+    }
+    var f = Math.pow(10, dp);
+    return Math.round(val * f) / f;
+}
 
 /**
  * Reflect point (x, y) about (ox, oy).
@@ -170,6 +187,141 @@ function extractNumbersFromFontSvg()
 }
 
 /**
+ *
+ **/
+function splitVertical(rap, num, path)
+{
+    var top = {
+            i: 0,
+            x: 0,
+            y: 99999999
+        }, bottom = {
+            i: 0,
+            x: 0,
+            y: -99999999
+        },
+        ptsParts = path.split(/[A-Z]/),
+        //cmdsParts = path.split(/[^A-Z]+/), //should be M, Ls and Z only
+        lastCoords = [],
+        cnt = ptsParts.length - 1, i,
+        val, lastCoordMatch,
+        pathL, pathR;
+
+    function getTranslateString()
+    {
+        return 't' + ((num%5+1)*205) + ' ' + (((num/5)|0)*205);
+    }
+
+    for (i = 1; i < cnt; ++i) //skip 1st and last empty non-coordinates
+    {
+        lastCoordMatch = ptsParts[i].match(RX_LAST_COORD);
+        lastCoords[i] = {
+            x: parseFloat(lastCoordMatch[1]),
+            y: parseFloat(lastCoordMatch[2])
+        };
+        //console.log(num, i, cnt, ptsParts[i], lastCoordMatch);
+        val = lastCoords[i].y;
+        if (val < top.y)
+        {
+            top.i = i;
+            top.x = lastCoords[i].x;
+            top.y = val;
+        }
+        if (val > bottom.y)
+        {
+            bottom.i = i;
+            bottom.x = lastCoords[i].x;
+            bottom.y = val;
+        }
+    }
+    //console.log('#', num, cnt, top, bottom);
+    if (bottom.i > top.i)
+    {
+        pathL = 'M' + lastCoords[1].x + ' ' + lastCoords[1].y;
+        for (i = 2; i <= top.i; ++i)
+        {
+            pathL += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        pathL += 'L' + top.x + ' -50L-50 -50L-50 150L' + bottom.x + ' 150';
+//        rap.text(top.x, 0, '1');
+//        rap.text(0, 0, '2');
+//        rap.text(0, 150, '3');
+//        rap.text(bottom.x, 150, '4');
+//        rap.text(bottom.x, bottom.y, '5');
+        for (i = bottom.i; i < cnt; ++i)
+        {
+            pathL += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        pathL += 'Z';
+
+        pathR = 'M' + lastCoords[top.i].x + ' ' + lastCoords[top.i].y;
+        for (i = top.i; i <= bottom.i; ++i)
+        {
+            pathR += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        pathR += 'L' + bottom.x + ' 150L150 150L150 -50L' + top.x + ' -50L' + top.x + ' ' + top.y + 'Z';
+//        rap.text(bottom.x, 150, 'R1');
+//        rap.text(150, 150, 'R2');
+//        rap.text(150, 0, 'R3');
+//        rap.text(top.x, 150, 'R4');
+//        rap.text(top.x, top.y, 'R5');
+    }
+    else //bottom.i <= top.i
+    {
+        pathL = 'M' + lastCoords[bottom.i].x + ' ' + lastCoords[bottom.i].y;
+        for (i = bottom.i; i <= top.i; ++i)
+        {
+            pathL += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        pathL += 'L' + top.x + ' -50L-50 -50L-50 150L' + bottom.x + ' 150L' + bottom.x + ' ' + bottom.y + 'Z';
+//        rap.text(top.x, 0, '1');
+//        rap.text(0, 0, '2');
+//        rap.text(0, 150, '3');
+//        rap.text(bottom.x, 150, '4');
+//        rap.text(bottom.x, bottom.y, '5');
+
+        pathR = 'M' + lastCoords[top.i].x + ' ' + lastCoords[top.i].y;
+        for (i = top.i; i < cnt; ++i)
+        {
+            pathR += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        for (i = 1; i <= bottom.i; ++i)
+        {
+            pathR += 'L' + lastCoords[i].x + ' ' + lastCoords[i].y;
+        }
+        pathR += 'L' + bottom.x + ' 150L150 150L150 -50L' + top.x + ' -50L' + top.x + ' ' + top.y;
+        pathR += 'Z';
+    }
+    //console.log(path);
+    //console.log(pathL);
+    if (DRAW_SPLITS)
+    {
+        rap.path(pathL)
+            .transform(getTranslateString())
+            .attr({stroke: '#F00', 'stoke-width': 10, fill: '#F00', 'fill-opacity': 0.5, title: 'L' + num});
+        rap.path(pathR)
+            .transform(getTranslateString())
+            .attr({stroke: '#00F', 'stoke-width': 10, fill: '#00F', 'fill-opacity': 0.5, title: 'R' + num});
+    }
+    if (DRAW_REF_PTS)
+    {
+        rap.circle(top.x, top.y, 3)
+            .transform(getTranslateString())
+            .attr({fill: '#0F0'});
+        rap.circle(bottom.x, bottom.y, 3)
+            .transform(getTranslateString())
+            .attr({fill: '#F00'});
+        rap.circle(lastCoords[1].x, lastCoords[1].y, 3)
+            .transform(getTranslateString())
+            .attr({fill: '#00F'});
+        rap.circle(lastCoords[cnt-1].x, lastCoords[cnt-1].y, 3)
+            .transform(getTranslateString())
+            .attr({stroke: '#F0F'});
+    }
+    //rap.setViewBox(-60, -60, 300, 300);
+}
+
+/**
  * Extracts individual paths in given object and
  * converts all non-L (straight line) SVG segments in each path to L commands.
  * (M, L and Z are not converted).
@@ -192,6 +344,7 @@ function processNumber(rap, num, path)
         lastCoordMatch, lastX, lastY,
         curvePath, convertedCurvePath,
         realLen, len, j, pt, inc;
+
     if (PRINTSCREEN)
     {
         console.log('#', num, '#paths:', cnt - 1, ', path=', path, '===\n');
@@ -322,7 +475,8 @@ function processNumber(rap, num, path)
                             pt = curvePath.getPointAtLength(j);
                             if (!ROUNDOFF)
                             {
-                                subpath += 'L' + pt.x + ' ' + pt.y;
+//                                subpath += 'L' + pt.x + ' ' + pt.y;
+                                subpath += 'L' + reducePrecision(pt.x, 3) + ' ' + reducePrecision(pt.y, 3);
                             }
                             else
                             {
@@ -385,7 +539,7 @@ function run()
             minX = 9999999999, minY = 9999999999,
             maxX = -9999999999, maxY = -9999999999,
             boundsMaxHeight = -9999999999,
-            cx, cy;
+            cy;
 
         //console.log(outputNums);
         for (i = 0; i < 10; ++i)
@@ -427,7 +581,12 @@ function run()
             }
         }
 
-        cx = (minX + maxX) / 2;
+        function getTranslateString(num, s)
+        {
+            return 't' + (s*205) + ' ' + ((num+2)*205);
+        }
+
+        //cx = (minX + maxX) / 2;
         cy = (minY + maxY) / 2;
         //console.log(minX|0, maxX|0, minY|0, maxY|0, cx|0, cy|0, boundsMaxHeight|0);
         for (i = 0; i < 10; ++i)
@@ -437,14 +596,41 @@ function run()
                 subpath = subpaths[i][j];
                 if (SCALE_TO_MAX_HEIGHT)
                 {
-                    subpath = resize2(r, subpath, cy, SCALE_TO_MAX_HEIGHT / boundsMaxHeight);
+                    subpaths[i][j] = subpath = resize2(r, subpath, cy, SCALE_TO_MAX_HEIGHT / boundsMaxHeight);
                 }
                 if (DRAW_STRAIGHTENED)
                 {
-                    r.path(subpath);
+                    r.path(subpath)
+                        .transform(getTranslateString(i, j));
                 }
             }
         }
+
+//        for (i = 0; i < 9; ++i)
+//        {
+//            //for (j = 0; j < subpaths[i].length; ++j)
+//            for (j = 0; j < 1; ++j) //TRY 1 first
+//            {
+//                splitVertical(r, i, subpaths[i][j]);
+//            }
+//        }
+        //NOT OK: 3, 5
+        for (i = 0; i <= 9; ++i)
+        {
+            if ((i === 6) || (i === 9))
+            {
+                splitVertical(r, i, subpaths[i][1]);
+            }
+            else if (i === 8)
+            {
+                splitVertical(r, i, subpaths[i][1]);
+            }
+            else
+            {
+                splitVertical(r, i, subpaths[i][0]);
+            }
+        }
+//        splitVertical(r, 0, subpaths[0][0]);
 
         //var p = r.path("M295.186,122.908c12.434,18.149,32.781,18.149,45.215,0l12.152-17.736c12.434-18.149,22.109-15.005,21.5,6.986l-0.596,21.49c-0.609,21.992,15.852,33.952,36.579,26.578l20.257-7.207c20.728-7.375,26.707,0.856,13.288,18.29l-13.113,17.037c-13.419,17.434-7.132,36.784,13.971,43.001l20.624,6.076c21.103,6.217,21.103,16.391,0,22.608l-20.624,6.076c-21.103,6.217-27.39,25.567-13.971,43.001l13.113,17.037c13.419,17.434,7.439,25.664-13.287,18.289l-20.259-7.207c-20.727-7.375-37.188,4.585-36.578,26.576l0.596,21.492c0.609,21.991-9.066,25.135-21.5,6.986L340.4,374.543c-12.434-18.148-32.781-18.148-45.215,0.001l-12.152,17.736c-12.434,18.149-22.109,15.006-21.5-6.985l0.595-21.492c0.609-21.991-15.851-33.951-36.578-26.576l-20.257,7.207c-20.727,7.375-26.707-0.855-13.288-18.29l13.112-17.035c13.419-17.435,7.132-36.785-13.972-43.002l-20.623-6.076c-21.104-6.217-21.104-16.391,0-22.608l20.623-6.076c21.104-6.217,27.391-25.568,13.972-43.002l-13.112-17.036c-13.419-17.434-7.439-25.664,13.288-18.29l20.256,7.207c20.728,7.374,37.188-4.585,36.579-26.577l-0.595-21.49c-0.609-21.992,9.066-25.136,21.5-6.986L295.186,122.908z").attr({stroke: "#666", opacity: '0.3', "stroke-width": '10'});
 //        var logo = r.set(
